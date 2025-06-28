@@ -13,9 +13,11 @@ import streamlit as st
 import json
 from datetime import timedelta
 
+# ---- Auth Constants ----
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
 TOKEN_PICKLE = "token.pickle"
 
+# ---- Load credentials from Streamlit secrets ----
 def get_credentials():
     creds = None
     credentials_raw = st.secrets["GOOGLE_CREDENTIALS"]
@@ -28,6 +30,7 @@ def get_credentials():
 
     return creds
 
+# ---- Core Logic to Check Availability ----
 def check_calendar_availability():
     creds = get_credentials()
     service = build("calendar", "v3", credentials=creds)
@@ -47,6 +50,7 @@ def check_calendar_availability():
     busy_times = [event["start"].get("dateTime", event["start"].get("date")) for event in events]
     return busy_times
 
+# ---- Core Logic to Book Meeting ----
 def book_meeting(start_time_iso, end_time_iso, summary="Meeting with TailorTalk"):
     creds = get_credentials()
     service = build("calendar", "v3", credentials=creds)
@@ -60,6 +64,7 @@ def book_meeting(start_time_iso, end_time_iso, summary="Meeting with TailorTalk"
     created_event = service.events().insert(calendarId="primary", body=event).execute()
     return created_event.get("htmlLink")
 
+# ---- LangGraph State ----
 class AgentState(BaseModel):
     user_input: str
     intent: Optional[Literal["check", "book"]] = None
@@ -68,6 +73,7 @@ class AgentState(BaseModel):
 class AgentStateGraph(TypedDict):
     state: AgentState
 
+# ---- Intent Parsing ----
 def parse_intent(data: AgentStateGraph) -> AgentStateGraph:
     state = data["state"]
     user_input = state.user_input.lower()
@@ -80,11 +86,13 @@ def parse_intent(data: AgentStateGraph) -> AgentStateGraph:
         state.response = "❌ I couldn't understand your intent. Try asking about availability or booking."
     return {"state": state}
 
+# ---- Utility: Extract time phrase from sentence ----
 def extract_datetime_phrase(text):
     pattern = r"(tomorrow.*?\d{1,2}(:\d{2})?\s?(AM|PM)?)|(today.*?\d{1,2}(:\d{2})?\s?(AM|PM)?)|(on\s.*?\d{1,2}(:\d{2})?\s?(AM|PM)?)"
     match = re.search(pattern, text, flags=re.IGNORECASE)
     return match.group() if match else text
 
+# ---- Check Logic ----
 def check_availability(state: AgentState) -> AgentState:
     try:
         busy_slots = check_calendar_availability()
@@ -96,6 +104,7 @@ def check_availability(state: AgentState) -> AgentState:
         state.response = f"❌ Failed to fetch calendar: {str(e)}"
     return state
 
+# ---- Book Logic ----
 def book_slot(state: AgentState) -> AgentState:
     try:
         time_phrase = extract_datetime_phrase(state.user_input)
@@ -117,10 +126,12 @@ def book_slot(state: AgentState) -> AgentState:
         state.response = f"❌ Booking error: {str(e)}"
     return state
 
+# ---- Fallback ----
 def handle_unknown(state: AgentState) -> AgentState:
     state.response = "❌ Sorry, I couldn't process that. Try asking about meetings or bookings."
     return state
 
+# ---- Graph Setup ----
 builder = StateGraph(AgentStateGraph)
 builder.add_node("intent", parse_intent)
 builder.set_entry_point("intent")
