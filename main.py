@@ -1,35 +1,43 @@
-from fastapi import FastAPI, Request
-from fastapi.responses import RedirectResponse
 import datetime
-import os
 import pickle
-from google_auth_oauthlib.flow import InstalledAppFlow
+import os
+from typing import TypedDict, Annotated, Literal, Optional
+import dateparser
+import requests
+import re
+
+from langgraph.graph import StateGraph
+from pydantic import BaseModel
 from googleapiclient.discovery import build
-from fastapi.responses import JSONResponse
-from fastapi import Request
+from google_auth_oauthlib.flow import InstalledAppFlow
 import streamlit as st
 import json
-from google_auth_oauthlib.flow import InstalledAppFlow
+from datetime import timedelta
 
-app = FastAPI()
-
-# Scopes define the level of access
+# ---- Auth Constants ----
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
-
-# Save the token after first login
 TOKEN_PICKLE = "token.pickle"
 
-# Load credentials
+# ---- Load credentials from Streamlit secrets ----
 def get_credentials():
     creds = None
-    # 🔁 Load credentials from secrets instead of a file
-    credentials_raw = st.secrets["GOOGLE_CREDENTIALS"]
-    credentials_dict = json.loads(credentials_raw)
-    flow = InstalledAppFlow.from_client_config(credentials_dict, SCOPES)
-    creds = flow.run_local_server(port=0)
-
-    with open(TOKEN_PICKLE, "wb") as token:
-        pickle.dump(creds, token)
+    if os.path.exists(TOKEN_PICKLE):
+        with open(TOKEN_PICKLE, "rb") as token:
+            creds = pickle.load(token)
+    
+    if not creds or not creds.valid:
+        credentials_raw = st.secrets["GOOGLE_CREDENTIALS"]
+        credentials_dict = json.loads(credentials_raw)
+        flow = InstalledAppFlow.from_client_config(
+            credentials_dict, 
+            SCOPES,
+            redirect_uri="urn:ietf:wg:oauth:2.0:oob"
+        )
+        creds = flow.run_local_server(port=0)
+        
+        with open(TOKEN_PICKLE, "wb") as token:
+            pickle.dump(creds, token)
+    
     return creds
 
 @app.get("/")

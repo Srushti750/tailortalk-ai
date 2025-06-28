@@ -1,31 +1,59 @@
 import streamlit as st
 from agent import runnable_graph, AgentState
 
-st.set_page_config(page_title="TailorTalk AI", page_icon="🧠")
+st.set_page_config(
+    page_title="TailorTalk AI", 
+    page_icon="🧠",
+    layout="centered"
+)
+
+# Custom CSS for better UI
+st.markdown("""
+    <style>
+    .chat-message {
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    .user-message {
+        background-color: #f0f2f6;
+    }
+    .assistant-message {
+        background-color: #e6f7ff;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
 st.title("📅 TailorTalk AI - Calendar Assistant")
 st.markdown("Ask me about your availability or to book a meeting.")
 
-# Keep chat history across interactions
-if "history" not in st.session_state:
-    st.session_state.history = []
+# Initialize chat history
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-# Chat input box
-user_input = st.chat_input("Say something...")
+# Display chat messages
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
-if user_input:
-    st.session_state.history.append({"role": "user", "content": user_input})
-
-    # Run LangGraph agent
-    with st.spinner("Thinking..."):
-        state = AgentState(user_input=user_input)
-        result = runnable_graph.invoke({"state": state})
-
-        # Safe access of response
-        response = result["state"].response if isinstance(result, dict) else result.response
-        st.session_state.history.append({"role": "assistant", "content": response})
-
-# Display conversation history
-for msg in st.session_state.history:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
+# Chat input
+if prompt := st.chat_input("Say something..."):
+    # Add user message to chat history
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+    
+    # Get assistant response
+    with st.chat_message("assistant"):
+        with st.spinner("Thinking..."):
+            try:
+                state = AgentState(user_input=prompt)
+                result = runnable_graph.invoke({"state": state})
+                response = result["state"].response
+            except Exception as e:
+                response = f"Sorry, I encountered an error: {str(e)}"
+            
+            st.markdown(response)
+    
+    # Add assistant response to chat history
+    st.session_state.messages.append({"role": "assistant", "content": response})
