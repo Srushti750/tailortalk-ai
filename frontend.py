@@ -19,10 +19,10 @@ if user_input:
     # Run LangGraph agent
     with st.spinner("Thinking..."):
         state = AgentState(user_input=user_input)
-        result = runnable_graph.invoke(state)
+        result = runnable_graph.invoke({"state": state})
 
         # Safe access of response
-        response = result.response if hasattr(result, "response") else result.get("response", "❌ No response.")
+        response = result["state"].response if isinstance(result, dict) else result.response
         st.session_state.history.append({"role": "assistant", "content": response})
 
 # Display conversation history
