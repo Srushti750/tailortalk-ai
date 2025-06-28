@@ -6,5 +6,5 @@ google-auth
 google-auth-oauthlib
 google-api-python-client
 langchain
-streamlit
 langgraph
+streamlit
