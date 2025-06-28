@@ -7,7 +7,9 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from fastapi.responses import JSONResponse
 from fastapi import Request
-
+import streamlit as st
+import json
+from google_auth_oauthlib.flow import InstalledAppFlow
 
 app = FastAPI()
 
@@ -18,19 +20,17 @@ SCOPES = ["https://www.googleapis.com/auth/calendar"]
 TOKEN_PICKLE = "token.pickle"
 
 # Load credentials
-
 def get_credentials():
     creds = None
-    if os.path.exists(TOKEN_PICKLE):
-        with open(TOKEN_PICKLE, "rb") as token:
-            creds = pickle.load(token)
-    else:
-        flow = InstalledAppFlow.from_client_secrets_file("credentials.json", SCOPES)
-        creds = flow.run_local_server(port=0)
-        with open(TOKEN_PICKLE, "wb") as token:
-            pickle.dump(creds, token)
-    return creds
+    # 🔁 Load credentials from secrets instead of a file
+    credentials_raw = st.secrets["GOOGLE_CREDENTIALS"]
+    credentials_dict = json.loads(credentials_raw)
+    flow = InstalledAppFlow.from_client_config(credentials_dict, SCOPES)
+    creds = flow.run_local_server(port=0)
 
+    with open(TOKEN_PICKLE, "wb") as token:
+        pickle.dump(creds, token)
+    return creds
 
 @app.get("/")
 def root():
