@@ -47,9 +47,12 @@ if prompt := st.chat_input("Say something..."):
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
             try:
+                # Create AgentState with required user_input
                 state = AgentState(user_input=prompt)
+                # Pass the complete state dictionary
                 result = runnable_graph.invoke({"state": state})
-                response = result["state"].response
+                # Safely extract response
+                response = result.get("state", {}).get("response", "No response generated")
             except Exception as e:
                 response = f"Sorry, I encountered an error: {str(e)}"
             

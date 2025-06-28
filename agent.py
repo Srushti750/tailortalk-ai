@@ -96,13 +96,10 @@ def extract_datetime_phrase(text):
 def check_availability(state: AgentState) -> AgentState:
     try:
         busy_slots = check_calendar_availability()
-        if busy_slots:
-            state.response = "❌ You are busy at:\n" + "\n".join(f"• {slot}" for slot in busy_slots)
-        else:
-            state.response = "✅ You are free! No meetings scheduled."
+        state.response = "❌ You are busy at:\n" + "\n".join(f"• {slot}" for slot in busy_slots) if busy_slots else "✅ You are free! No meetings scheduled."
     except Exception as e:
         state.response = f"❌ Failed to fetch calendar: {str(e)}"
-    return state
+    return state  # Return the modified state object
 
 # ---- Book Logic ----
 def book_slot(state: AgentState) -> AgentState:
