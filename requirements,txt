@@ -6,6 +6,5 @@ google-auth
 google-auth-oauthlib
 google-api-python-client
 langchain
-langgraph
 streamlit
-langgraph
+langgraph=='0.0.36'
